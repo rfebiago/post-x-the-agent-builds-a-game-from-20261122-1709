@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The one prompt</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #0b0b16; height: 100%; overflow: hidden; }
+  body { font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace; }
+  #stage { width: 1080px; height: 1920px; margin: 0 auto; background: #0b0b16;
+           display: flex; flex-direction: column; justify-content: flex-start; padding: 520px 84px 0; box-sizing: border-box; }
+  #kicker { color: #ff2e88; font-size: 44px; font-weight: 700; letter-spacing: 6px; margin-bottom: 44px; }
+  #prompt { color: #fff; font-size: 64px; line-height: 1.45; font-weight: 700; min-height: 560px; }
+  #prompt .caret { display: inline-block; width: 30px; height: 62px; background: #ffd23f;
+                  vertical-align: -8px; animation: blink 0.7s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  #prompt .hl { color: #ffd23f; }
+  #prompt .hl2 { color: #4ade80; }
+  #who { margin-top: 70px; display: flex; align-items: center; gap: 24px; color: #9aa0c3; font-size: 34px; }
+  #avatar { width: 84px; height: 84px; border-radius: 50%; background: linear-gradient(135deg, #ff2e88, #7c3aed);
+            display: flex; align-items: center; justify-content: center; font-size: 44px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="kicker">ONE PROMPT. THAT'S IT.</div>
+  <div id="prompt"><span id="typed"></span><span class="caret"></span></div>
+  <div id="who"><div id="avatar">🤖</div><div>my AI agent · make.fun</div></div>
+</div>
+<script>
+(function () {
+  var full = 'Build me a tiny browser game: a ball, a paddle, bricks. <span class="hl">Make it fun.</span> <span class="hl2">Go.</span>';
+  // type plain text char by char, keeping the two highlight spans for the end
+  var plain = 'Build me a tiny browser game: a ball, a paddle, bricks. Make it fun. Go.';
+  var el = document.getElementById('typed');
+  var i = 0;
+  function paint() {
+    var s = plain.slice(0, i);
+    s = s.replace('Make it fun.', '<span class="hl">Make it fun.</span>');
+    s = s.replace('Go.', '<span class="hl2">Go.</span>');
+    el.innerHTML = s;
+  }
+  var timer = setInterval(function () {
+    i += 2;
+    if (i >= plain.length) { i = plain.length; clearInterval(timer); }
+    paint();
+  }, 55);
+  paint();
+})();
+</script>
+</body>
+</html>

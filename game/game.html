@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BRICK BOUNCE — built from one prompt</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #0b0b16; height: 100%; overflow: hidden; }
+  body { font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace; }
+  #stage { position: relative; width: 1080px; height: 1920px; margin: 0 auto; background: #0b0b16; }
+  /* fake browser chrome */
+  #chrome { height: 96px; background: #171724; display: flex; align-items: center; gap: 18px; padding: 0 28px; }
+  .dot { width: 26px; height: 26px; border-radius: 50%; }
+  #urlbar { flex: 1; height: 58px; background: #23233a; border-radius: 29px; color: #9aa0c3;
+           display: flex; align-items: center; padding: 0 26px; font-size: 30px; }
+  #urlbar b { color: #e8eaf6; font-weight: 700; }
+  /* scoreboard */
+  #board { height: 150px; display: flex; align-items: center; justify-content: space-between; padding: 0 48px; }
+  #title { color: #fff; font-size: 44px; font-weight: 700; letter-spacing: 2px; }
+  #title span { color: #ff2e88; }
+  #score { color: #ffd23f; font-size: 64px; font-weight: 700; }
+  #score small { color: #9aa0c3; font-size: 28px; display: block; text-align: right; letter-spacing: 3px;}
+  #game { display: block; margin: 0 auto; background: #101024; border: 4px solid #2a2a4a; border-radius: 18px; }
+  #toast { position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%);
+          color: #fff; font-size: 72px; font-weight: 700; text-align: center;
+          text-shadow: 0 4px 30px rgba(0,0,0,.8); opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="chrome">
+    <div class="dot" style="background:#ff5f57"></div>
+    <div class="dot" style="background:#febc2e"></div>
+    <div class="dot" style="background:#28c840"></div>
+    <div id="urlbar">🔒&nbsp;<b>localhost</b>&nbsp;:3000&nbsp;/&nbsp;game.html</div>
+  </div>
+  <div id="board">
+    <div id="title">BRICK <span>BOUNCE</span></div>
+    <div id="score"><small>SCORE</small><span id="scoreNum">0</span></div>
+  </div>
+  <canvas id="game" width="984" height="1560"></canvas>
+  <div id="toast"></div>
+</div>
+<script>
+(function () {
+  var cv = document.getElementById('game');
+  var ctx = cv.getContext('2d');
+  var W = cv.width, H = cv.height;
+  var scoreEl = document.getElementById('scoreNum');
+  var toastEl = document.getElementById('toast');
+
+  var PADDLE_W = 190, PADDLE_H = 26, PADDLE_Y = H - 90;
+  var paddleX = (W - PADDLE_W) / 2;
+  var ball = { x: W / 2, y: H / 2, r: 17, vx: 8.6, vy: -9.6 };
+  var score = 0, lives = 3, level = 1;
+  var bricks = [];
+  var ROWS = 6, COLS = 7, BW = 128, BH = 44, GAP = 10, TOP = 70, LEFT = 12;
+  var COLORS = ['#ff2e88', '#ff9f1c', '#ffd23f', '#4ade80', '#38bdf8', '#a78bfa'];
+  var toastTimer = 0;
+
+  function buildBricks() {
+    bricks = [];
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        bricks.push({ x: LEFT + c * (BW + GAP), y: TOP + r * (BH + GAP),
+                      w: BW, h: BH, color: COLORS[r % COLORS.length], alive: true });
+      }
+    }
+  }
+  buildBricks();
+
+  function toast(msg, ms) {
+    toastEl.textContent = msg;
+    toastEl.style.opacity = 1;
+    toastTimer = ms || 900;
+  }
+
+  function resetBall() {
+    ball.x = W / 2; ball.y = H / 2;
+    ball.vx = (Math.random() < 0.5 ? -1 : 1) * 8.6;
+    ball.vy = -9.6;
+    paddleX = (W - PADDLE_W) / 2;
+  }
+
+  function step() {
+    // demo auto-player: paddle chases the ball with a little lag, so it feels alive
+    var target = ball.x - PADDLE_W / 2 + Math.sin(Date.now() / 500) * 26;
+    paddleX += (target - paddleX) * 0.14;
+    if (paddleX < 0) paddleX = 0;
+    if (paddleX > W - PADDLE_W) paddleX = W - PADDLE_W;
+
+    ball.x += ball.vx; ball.y += ball.vy;
+    if (ball.x - ball.r < 0) { ball.x = ball.r; ball.vx = Math.abs(ball.vx); }
+    if (ball.x + ball.r > W) { ball.x = W - ball.r; ball.vx = -Math.abs(ball.vx); }
+    if (ball.y - ball.r < 0) { ball.y = ball.r; ball.vy = Math.abs(ball.vy); }
+
+    // paddle hit
+    if (ball.vy > 0 && ball.y + ball.r >= PADDLE_Y && ball.y + ball.r <= PADDLE_Y + PADDLE_H + 14
+        && ball.x >= paddleX - 10 && ball.x <= paddleX + PADDLE_W + 10) {
+      var hit = (ball.x - (paddleX + PADDLE_W / 2)) / (PADDLE_W / 2);
+      var speed = Math.min(13, Math.hypot(ball.vx, ball.vy) * 1.01);
+      var ang = hit * 1.05;
+      ball.vx = speed * Math.sin(ang);
+      ball.vy = -Math.abs(speed * Math.cos(ang));
+      ball.y = PADDLE_Y - ball.r;
+    }
+
+    // bricks
+    for (var i = 0; i < bricks.length; i++) {
+      var b = bricks[i];
+      if (!b.alive) continue;
+      if (ball.x + ball.r > b.x && ball.x - ball.r < b.x + b.w &&
+          ball.y + ball.r > b.y && ball.y - ball.r < b.y + b.h) {
+        b.alive = false;
+        score += 10;
+        scoreEl.textContent = score;
+        ball.vy = -ball.vy;
+        if (score % 100 === 0) toast('+' + score + '  NICE!');
+        break;
+      }
+    }
+
+    // missed
+    if (ball.y - ball.r > H) {
+      lives--;
+      if (lives <= 0) {
+        toast('GAME OVER — score ' + score, 1600);
+        score = 0; lives = 3; level = 1;
+        scoreEl.textContent = score;
+        buildBricks();
+      }
+      resetBall();
+    }
+
+    // level cleared
+    var left = 0;
+    for (var j = 0; j < bricks.length; j++) if (bricks[j].alive) left++;
+    if (left === 0) {
+      level++;
+      toast('LEVEL ' + level + '!', 1200);
+      buildBricks();
+      ball.vx *= 1.12; ball.vy *= 1.12;
+      resetBall();
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    // bricks
+    for (var i = 0; i < bricks.length; i++) {
+      var b = bricks[i];
+      if (!b.alive) continue;
+      ctx.fillStyle = b.color;
+      ctx.beginPath();
+      ctx.roundRect(b.x, b.y, b.w, b.h, 8);
+      ctx.fill();
+    }
+    // paddle
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(paddleX, PADDLE_Y, PADDLE_W, PADDLE_H, 13);
+    ctx.fill();
+    // ball with glow
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r + 10, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,210,63,0.25)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffd23f';
+    ctx.fill();
+    // lives
+    ctx.fillStyle = '#9aa0c3';
+    ctx.font = '700 30px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('LIVES ' + '●'.repeat(lives) + '○'.repeat(3 - lives) + '    LEVEL ' + level, 24, H - 28);
+    if (toastTimer > 0) {
+      toastTimer -= 16;
+      if (toastTimer <= 0) toastEl.style.opacity = 0;
+    }
+  }
+
+  function loop() { step(); draw(); requestAnimationFrame(loop); }
+  toast('BRICK BOUNCE', 1100);
+  loop();
+})();
+</script>
+</body>
+</html>

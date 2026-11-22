@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Agent at work</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #0b0b16; height: 100%; overflow: hidden; }
+  body { font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace; }
+  #stage { width: 1080px; height: 1920px; margin: 0 auto; background: #0b0b16;
+           display: flex; flex-direction: column; justify-content: flex-start; padding: 430px 84px 0; box-sizing: border-box; }
+  #kicker { color: #4ade80; font-size: 40px; font-weight: 700; letter-spacing: 6px; margin-bottom: 44px; }
+  #term { background: #12122a; border: 3px solid #2a2a4a; border-radius: 24px; padding: 44px 40px;
+          min-height: 640px; font-size: 37px; line-height: 1.85; color: #d6d8ea; }
+  #term .line { opacity: 0; white-space: nowrap; overflow: hidden; }
+  #term .line.on { opacity: 1; }
+  #term .ok { color: #4ade80; }
+  #term .cmd { color: #ffd23f; }
+  #term .dim { color: #7c80a3; }
+  #term .file { color: #38bdf8; }
+  #bar { margin-top: 40px; height: 26px; background: #23233a; border-radius: 13px; overflow: hidden; }
+  #fill { height: 100%; width: 0%; background: linear-gradient(90deg, #ff2e88, #ffd23f); }
+  #pct { margin-top: 22px; color: #9aa0c3; font-size: 34px; }
+  #pct b { color: #fff; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="kicker">▸ AGENT IS BUILDING…</div>
+  <div id="term">
+    <div class="line"><span class="dim">$</span> <span class="cmd">agent build --prompt "one prompt"</span></div>
+    <div class="line"><span class="ok">✓</span> prompt received — 1 prompt, 0 edits</div>
+    <div class="line"><span class="ok">✓</span> planning the game loop…</div>
+    <div class="line"><span class="ok">✓</span> wrote <span class="file">game.html</span> <span class="dim">(188 lines)</span></div>
+    <div class="line"><span class="ok">✓</span> physics: bounce, bricks, score</div>
+    <div class="line"><span class="ok">✓</span> auto-play demo on — testing it live</div>
+    <div class="line"><span class="ok">✓</span> <span class="file">game.html</span> runs — no errors</div>
+    <div class="line"><span class="ok">✓ DONE</span></div>
+  </div>
+  <div id="bar"><div id="fill"></div></div>
+  <div id="pct"><b id="pctNum">0%</b> — from prompt to playable game</div>
+</div>
+<script>
+(function () {
+  var lines = document.querySelectorAll('#term .line');
+  var fill = document.getElementById('fill');
+  var pctNum = document.getElementById('pctNum');
+  var idx = 0;
+  function showNext() {
+    if (idx < lines.length) {
+      lines[idx].classList.add('on');
+      idx++;
+      var p = Math.round((idx / lines.length) * 100);
+      fill.style.width = p + '%';
+      pctNum.textContent = p + '%';
+      setTimeout(showNext, 520);
+    }
+  }
+  setTimeout(showNext, 350);
+})();
+</script>
+</body>
+</html>
